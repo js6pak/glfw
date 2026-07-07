@@ -405,6 +405,10 @@ typedef struct _GLFWwindowWayland
         struct libdecor_frame*  frame;
     } libdecor;
 
+    struct xdg_toplevel_icon_v1* icon;
+    struct wl_buffer**          iconBuffers;
+    int                         iconBufferCount;
+
     double                      cursorPosX, cursorPosY;
 
     char*                       appId;

@@ -987,6 +987,11 @@ static GLFWbool createLibdecorFrame(_GLFWwindow* window)
 
     libdecor_frame_set_title(window->wl.libdecor.frame, window->title);
 
+    if (_glfw.wl.toplevelIconManager && window->wl.icon)
+        xdg_toplevel_icon_manager_v1_set_icon(_glfw.wl.toplevelIconManager,
+                                              libdecor_frame_get_xdg_toplevel(window->wl.libdecor.frame),
+                                              window->wl.icon);
+
     if (window->resizable)
     {
         if (window->minwidth != GLFW_DONT_CARE &&
@@ -1109,6 +1114,10 @@ static GLFWbool createXdgShellObjects(_GLFWwindow* window)
         xdg_toplevel_set_app_id(window->wl.xdg.toplevel, window->wl.appId);
 
     xdg_toplevel_set_title(window->wl.xdg.toplevel, window->title);
+
+    if (_glfw.wl.toplevelIconManager && window->wl.icon)
+        xdg_toplevel_icon_manager_v1_set_icon(_glfw.wl.toplevelIconManager,
+                                              window->wl.xdg.toplevel, window->wl.icon);
 
     if (window->monitor)
     {
@@ -2453,6 +2462,21 @@ GLFWbool _glfwCreateWindowWayland(_GLFWwindow* window,
     return GLFW_TRUE;
 }
 
+static void destroyIcon(_GLFWwindow* window)
+{
+    if (window->wl.icon)
+        xdg_toplevel_icon_v1_destroy(window->wl.icon);
+
+    for (int i = 0;  i < window->wl.iconBufferCount;  i++)
+        wl_buffer_destroy(window->wl.iconBuffers[i]);
+
+    _glfw_free(window->wl.iconBuffers);
+
+    window->wl.icon = NULL;
+    window->wl.iconBuffers = NULL;
+    window->wl.iconBufferCount = 0;
+}
+
 void _glfwDestroyWindowWayland(_GLFWwindow* window)
 {
     if (window->wl.surface == _glfw.wl.pointerSurface)
@@ -2491,6 +2515,8 @@ void _glfwDestroyWindowWayland(_GLFWwindow* window)
         window->context.destroy(window);
 
     destroyShellObjects(window);
+
+    destroyIcon(window);
 
     if (window->wl.fallback.buffer)
         wl_buffer_destroy(window->wl.fallback.buffer);
@@ -2532,48 +2558,38 @@ void _glfwSetWindowIconWayland(_GLFWwindow* window,
         return;
     }
 
-    if (!count)
-    {
-        if (window->wl.libdecor.frame)
-            xdg_toplevel_icon_manager_v1_set_icon(_glfw.wl.toplevelIconManager,
-                                                libdecor_frame_get_xdg_toplevel(window->wl.libdecor.frame),
-                                                NULL);
-        else if (window->wl.xdg.toplevel)
-            xdg_toplevel_icon_manager_v1_set_icon(_glfw.wl.toplevelIconManager, window->wl.xdg.toplevel, NULL);
+    for (int i = 0; i < count; i++) {
+      if (images[i].width != images[i].height) {
+        _glfwInputError(GLFW_INVALID_VALUE,
+                        "Wayland: The icon must be a square");
         return;
+      }
     }
 
-    for (int i = 0;  i < count;  i++)
+    destroyIcon(window);
+
+    if (count)
     {
-        if (images[i].width != images[i].height)
+        window->wl.icon = xdg_toplevel_icon_manager_v1_create_icon(_glfw.wl.toplevelIconManager);
+        window->wl.iconBuffers = _glfw_calloc(count, sizeof(struct wl_buffer*));
+        window->wl.iconBufferCount = count;
+
+        for (int i = 0;  i < count;  i++)
         {
-            _glfwInputError(GLFW_INVALID_VALUE,
-                            "Wayland: The icon must be a square");
-            return;
+            window->wl.iconBuffers[i] = createShmBuffer(&images[i]);
+            xdg_toplevel_icon_v1_add_buffer(window->wl.icon, window->wl.iconBuffers[i], 1);
         }
-    }
-
-    struct xdg_toplevel_icon_v1 *icon = xdg_toplevel_icon_manager_v1_create_icon(_glfw.wl.toplevelIconManager);
-    struct wl_buffer *bufferArr[count];
-
-    for (int i = 0;  i < count;  i++)
-    {
-        bufferArr[i] = createShmBuffer(&images[i]);
-        xdg_toplevel_icon_v1_add_buffer(icon, bufferArr[i], 1);
     }
 
     if (window->wl.libdecor.frame)
         xdg_toplevel_icon_manager_v1_set_icon(_glfw.wl.toplevelIconManager,
-                                                libdecor_frame_get_xdg_toplevel(window->wl.libdecor.frame),
-                                                icon);
+                                              libdecor_frame_get_xdg_toplevel(window->wl.libdecor.frame),
+                                              window->wl.icon);
     else if (window->wl.xdg.toplevel)
-        xdg_toplevel_icon_manager_v1_set_icon(_glfw.wl.toplevelIconManager, window->wl.xdg.toplevel, icon);
-    xdg_toplevel_icon_v1_destroy(icon);
+        xdg_toplevel_icon_manager_v1_set_icon(_glfw.wl.toplevelIconManager,
+                                              window->wl.xdg.toplevel, window->wl.icon);
 
-    for (int i = 0;  i < count;  i++)
-    {
-        wl_buffer_destroy(bufferArr[i]);
-    }
+    wl_surface_commit(window->wl.surface);
 }
 
 void _glfwGetWindowPosWayland(_GLFWwindow* window, int* xpos, int* ypos)
