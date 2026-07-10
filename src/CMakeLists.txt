@@ -125,8 +125,6 @@ set(GLFW_LIB_NAME_SUFFIX "")
 
 set_target_properties(glfw PROPERTIES
                       OUTPUT_NAME ${GLFW_LIB_NAME}
-                      VERSION ${GLFW_VERSION_MAJOR}.${GLFW_VERSION_MINOR}
-                      SOVERSION ${GLFW_VERSION_MAJOR}
                       POSITION_INDEPENDENT_CODE ON
                       C_STANDARD 99
                       C_EXTENSIONS OFF
@@ -326,6 +324,19 @@ if (GLFW_BUILD_SHARED_LIBRARY)
     if (UNIX)
         # Hide symbols not explicitly tagged for export from the shared library
         target_compile_options(glfw PRIVATE "-fvisibility=hidden")
+    endif()
+
+    if (APPLE)
+        add_custom_command(TARGET glfw POST_BUILD
+                           COMMAND dsymutil $<TARGET_FILE:glfw>
+                           COMMENT "Generating $<TARGET_FILE_NAME:glfw>.dSYM")
+    elseif (UNIX AND CMAKE_OBJCOPY)
+        add_custom_command(TARGET glfw POST_BUILD
+                           COMMAND "${CMAKE_OBJCOPY}" --only-keep-debug $<TARGET_FILE:glfw> $<TARGET_FILE:glfw>.debug
+                           COMMAND "${CMAKE_OBJCOPY}" --strip-debug $<TARGET_FILE:glfw>
+                           COMMAND "${CMAKE_OBJCOPY}" --add-gnu-debuglink=$<TARGET_FILE_NAME:glfw>.debug $<TARGET_FILE:glfw>
+                           WORKING_DIRECTORY $<TARGET_FILE_DIR:glfw>
+                           COMMENT "Splitting debug info into $<TARGET_FILE_NAME:glfw>.debug")
     endif()
 endif()
 

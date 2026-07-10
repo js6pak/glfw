@@ -44,9 +44,15 @@ jobs:
               run: cmake --build build-full-static --parallel
 
             - name: Configure Wayland+X11 shared library
-              run: cmake -B build-full-shared -D GLFW_BUILD_WAYLAND=ON -D BUILD_SHARED_LIBS=ON -D GLFW_BUILD_X11=ON
+              run: cmake -B build-full-shared -D GLFW_BUILD_WAYLAND=ON -D BUILD_SHARED_LIBS=ON -D GLFW_BUILD_X11=ON -D CMAKE_BUILD_TYPE=RelWithDebInfo
             - name: Build Wayland+X11 shared library
               run: cmake --build build-full-shared --parallel
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: libglfw-linux
+                  path: build-full-shared/src/libglfw.so*
 
     build-macos-clang:
         name: macOS (Clang)
@@ -70,9 +76,17 @@ jobs:
               run: cmake --build build-cocoa-static --parallel
 
             - name: Configure Cocoa shared library
-              run: cmake -B build-cocoa-shared -D BUILD_SHARED_LIBS=ON
+              run: cmake -B build-cocoa-shared -D BUILD_SHARED_LIBS=ON -D CMAKE_BUILD_TYPE=RelWithDebInfo
             - name: Build Cocoa shared library
               run: cmake --build build-cocoa-shared --parallel
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: libglfw-macos
+                  path: |
+                      build-cocoa-shared/src/libglfw*.dylib
+                      build-cocoa-shared/src/libglfw*.dSYM
 
     build-windows-msvc:
         name: Windows (MSVC)
@@ -96,5 +110,13 @@ jobs:
             - name: Configure Win32 shared x64 library
               run: cmake -B build-win32-shared-x64 -A x64 -D BUILD_SHARED_LIBS=ON
             - name: Build Win32 shared x64 library
-              run: cmake --build build-win32-shared-x64 --parallel
+              run: cmake --build build-win32-shared-x64 --parallel --config RelWithDebInfo
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: libglfw-windows
+                  path: |
+                      build-win32-shared-x64/src/RelWithDebInfo/glfw3.dll
+                      build-win32-shared-x64/src/RelWithDebInfo/glfw3.pdb
 
