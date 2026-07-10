@@ -2551,8 +2551,15 @@ void _glfwSetWindowTitleWayland(_GLFWwindow* window, const char* title)
 void _glfwSetWindowIconWayland(_GLFWwindow* window,
                                int count, const GLFWimage* images)
 {
+    if (window == NULL)
+    {
+        _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
+                        "Wayland: Requires a valid window handle to set the icon. There is no application icon to set.");
+        return;
+    }
+
     if (!_glfw.wl.toplevelIconManager)
-    {   
+    {
         _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
                         "Wayland: The platform does not support setting the window icon");
         return;
@@ -3689,8 +3696,8 @@ GLFWAPI struct xdg_toplevel* glfwGetWaylandToplevel(GLFWwindow* handle)
     {
         extern void* dlsym(void* handle, const char* symbol);
 
-        PFN_libdecor_frame_get_xdg_toplevel real_libdecor_get_toplevel = 
-            (PFN_libdecor_frame_get_xdg_toplevel)dlsym(_glfw.wl.libdecor.handle, 
+        PFN_libdecor_frame_get_xdg_toplevel real_libdecor_get_toplevel =
+            (PFN_libdecor_frame_get_xdg_toplevel)dlsym(_glfw.wl.libdecor.handle,
                                                        "libdecor_frame_get_xdg_toplevel");
 
         if (real_libdecor_get_toplevel)
@@ -3699,7 +3706,7 @@ GLFWAPI struct xdg_toplevel* glfwGetWaylandToplevel(GLFWwindow* handle)
         }
     }
 
-    return window->wl.xdg.toplevel;    
+    return window->wl.xdg.toplevel;
 }
 
 #endif // _GLFW_WAYLAND
