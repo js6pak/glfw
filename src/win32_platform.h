@@ -402,6 +402,7 @@ typedef struct _GLFWlibraryWin32
     UINT                mouseTrailSize;
     // The cursor handle to use to hide the cursor (NULL or a transparent cursor)
     HCURSOR             blankCursor;
+    GLFWbool            monitorsDirty;
 
     struct {
         HINSTANCE                       instance;

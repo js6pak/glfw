@@ -311,7 +311,7 @@ static LRESULT CALLBACK helperWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
     switch (uMsg)
     {
         case WM_DISPLAYCHANGE:
-            _glfwPollMonitorsWin32();
+            _glfw.win32.monitorsDirty = GLFW_TRUE;
             break;
 
         case WM_DEVICECHANGE:
