@@ -442,6 +442,8 @@ static GLFWbool loadCursorTheme(void)
         wl_cursor_theme_load(themeName, cursorSize * 2, _glfw.wl.shm);
 
     _glfw.wl.cursorSurface = wl_compositor_create_surface(_glfw.wl.compositor);
+    if (_glfw.wl.viewporter)
+        _glfw.wl.cursorViewport = wp_viewporter_get_viewport(_glfw.wl.viewporter, _glfw.wl.cursorSurface);
     _glfw.wl.cursorTimerfd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
     return GLFW_TRUE;
 }
@@ -977,6 +979,8 @@ void _glfwTerminateWayland(void)
 
     _glfw_free(_glfw.wl.offers);
 
+    if (_glfw.wl.cursorViewport)
+        wp_viewport_destroy(_glfw.wl.cursorViewport);
     if (_glfw.wl.cursorSurface)
         wl_surface_destroy(_glfw.wl.cursorSurface);
     if (_glfw.wl.subcompositor)

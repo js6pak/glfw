@@ -1322,12 +1322,34 @@ static void setCursorImage(_GLFWwindow* window,
     struct wl_cursor_image* image;
     struct wl_buffer* buffer;
     struct wl_surface* surface = _glfw.wl.cursorSurface;
+    struct wp_viewport* viewport = _glfw.wl.cursorViewport;
     int scale = 1;
+    int xhot, yhot;
 
     if (!wlCursor)
+    {
         buffer = cursorWayland->buffer;
+
+        if (viewport)
+        {
+            double contentScale = window->wl.fractionalScale ? (window->wl.scalingNumerator / 120.0) : window->wl.bufferScale;
+            wp_viewport_set_destination(viewport,
+                                        (int)(cursorWayland->width / contentScale + 0.5),
+                                        (int)(cursorWayland->height / contentScale + 0.5));
+            xhot = (int)(cursorWayland->xhot / contentScale + 0.5);
+            yhot = (int)(cursorWayland->yhot / contentScale + 0.5);
+        }
+        else
+        {
+            xhot = cursorWayland->xhot;
+            yhot = cursorWayland->yhot;
+        }
+    }
     else
     {
+        if (viewport)
+            wp_viewport_set_destination(viewport, -1, -1);
+
         if (window->wl.bufferScale > 1 && cursorWayland->cursorHiDPI)
         {
             wlCursor = cursorWayland->cursorHiDPI;
@@ -1347,12 +1369,13 @@ static void setCursorImage(_GLFWwindow* window,
         cursorWayland->height = image->height;
         cursorWayland->xhot = image->hotspot_x;
         cursorWayland->yhot = image->hotspot_y;
+
+        xhot = cursorWayland->xhot / scale;
+        yhot = cursorWayland->yhot / scale;
     }
 
     wl_pointer_set_cursor(_glfw.wl.pointer, _glfw.wl.pointerEnterSerial,
-                          surface,
-                          cursorWayland->xhot / scale,
-                          cursorWayland->yhot / scale);
+                          surface, xhot, yhot);
     wl_surface_set_buffer_scale(surface, scale);
     wl_surface_attach(surface, buffer, 0, 0);
     wl_surface_damage(surface, 0, 0,
